@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import argparse
 import json
-import os
 
-from util import get_id_and_title_from_file_path
+from transcript_config import read_config
 
 
 STATIC_BASE_URI = 'https://storage.googleapis.com/sam-to-text-html/'
@@ -51,57 +50,70 @@ def get_best_transcript_from_result(result):
     return best_transcript
 
 
-def process_transcript(in_file_path, html_path, es_path):
-    """Make an HTML web page out of a Google Cloud Speech json file."""
-    doc_id, title = get_id_and_title_from_file_path(in_file_path)
-
-    with open(in_file_path, 'r') as f:
-        result_json = json.loads(f.read())
-
+def write_html_document(chunks, config, html_path):
     with open('template.html', 'r') as template_file:
         template_html = template_file.read()
 
-    results = result_json['results']
-    chunker = TranscriptChunker()
-    for result in results:
-        best_transcript = get_best_transcript_from_result(result)
-        chunker.add_transcript('<p>{}</p>'.format(best_transcript))
-
-    all_chunks = chunker.get_chunks()
-    full_html = ''.join(all_chunks)
-    html_document = template_html.format(title=title, content=full_html)
+    full_html = ''.join(chunks)
+    html_document = template_html.format(
+        title=config.title,
+        content=full_html)
     html_file_path = '{html_path}{doc_id}.html'.format(
         html_path=html_path,
-        doc_id=doc_id)
+        doc_id=config.id)
     with open(html_file_path, 'w') as out_html_file:
         out_html_file.write(html_document)
 
-    for i, chunk in enumerate(all_chunks):
+
+def write_es_documents(chunks, config, es_path):
+    for i, chunk in enumerate(chunks):
         json_doc = {
-            'id': doc_id,
-            'static_uri': make_static_uri(doc_id),
-            'title': title,
+            'id': config.id,
+            'static_uri': make_static_uri(config.id),
+            'title': config.title,
             'chunk_id': i,
-            'total_chunks': len(all_chunks),
+            'total_chunks': len(chunks),
             'content': chunk
         }
         es_file_path = '{es_path}{doc_id}-{i}.json'.format(
             es_path=es_path,
-            doc_id=doc_id,
+            doc_id=config.id,
             i=i)
         with open(es_file_path, 'w') as out_es_file:
             out_es_file.write(json.dumps(json_doc))
 
 
+def process_transcript(config, html_path, es_path):
+    """Given a transcript config, generate the HTML file and ES documents
+    and write them to disk.
+    """
+    chunker = TranscriptChunker()
+    for file_path in config.source_files:
+        with open(file_path, 'r') as f:
+            result_json = json.loads(f.read())
+
+        results = result_json['results']
+        for result in results:
+            best_transcript = get_best_transcript_from_result(result)
+            chunker.add_transcript('<p>{}</p>'.format(best_transcript))
+
+    all_chunks = chunker.get_chunks()
+    write_html_document(all_chunks, config, html_path)
+    write_es_documents(all_chunks, config, es_path)
+
+
+def process_transcripts(config_path, html_path, es_path):
+    """Read the transcript config file and generate HTML documents
+    and ES documents for each transcript."""
+    configs = read_config(config_path)
+    for config in configs:
+        process_transcript(config, html_path, es_path)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('in_path', help='Directory path to Google Cloud Speech output')
-    parser.add_argument('html_path', help='HTML directory path')
-    parser.add_argument('es_path', help='ES document directory path')
+    parser.add_argument('config_path', help='File path to transcript config')
+    parser.add_argument('html_path', help='HTML directory output path')
+    parser.add_argument('es_path', help='ES document directory output path')
     args = parser.parse_args()
-    all_files = os.listdir(args.in_path)
-    for file_name in all_files:
-        process_transcript(
-            args.in_path + file_name,
-            args.html_path,
-            args.es_path)
+    process_transcripts(args.config_path, args.html_path, args.es_path)
