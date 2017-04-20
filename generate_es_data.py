@@ -5,8 +5,14 @@ import json
 from util import get_id_and_title_from_file_path
 
 
+STATIC_BASE_URI = 'https://storage.googleapis.com/sam-to-text-html/'
+
 # Max length of a transcript chunk in characters
 CHUNK_MAX_LENGTH = 5000
+
+
+def make_static_uri(doc_id):
+    return STATIC_BASE_URI + doc_id + '.html'
 
 
 class TranscriptChunker:
@@ -72,6 +78,7 @@ def process_transcript(in_file_path, html_path, es_path):
     for i, chunk in enumerate(all_chunks):
         json_doc = {
             'id': doc_id,
+            'static_uri': make_static_uri(doc_id)
             'title': title,
             'chunk_id': i,
             'total_chunks': len(all_chunks),
