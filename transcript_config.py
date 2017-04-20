@@ -11,6 +11,7 @@ TranscriptConfig = namedtuple(
 
 
 def make_relative_paths(source_files, path_head):
+    """Script location might be different from config/transcript location."""
     return [
         os.path.join(path_head, file_path)
         for file_path in source_files
