@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import json
+import os
 
 from util import get_id_and_title_from_file_path
 
@@ -78,7 +79,7 @@ def process_transcript(in_file_path, html_path, es_path):
     for i, chunk in enumerate(all_chunks):
         json_doc = {
             'id': doc_id,
-            'static_uri': make_static_uri(doc_id)
+            'static_uri': make_static_uri(doc_id),
             'title': title,
             'chunk_id': i,
             'total_chunks': len(all_chunks),
@@ -94,10 +95,13 @@ def process_transcript(in_file_path, html_path, es_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('in_paths', help='Paths to Google Cloud Speech output')
+    parser.add_argument('in_path', help='Directory path to Google Cloud Speech output')
     parser.add_argument('html_path', help='HTML directory path')
     parser.add_argument('es_path', help='ES document directory path')
     args = parser.parse_args()
-    all_paths = args.in_paths.split(',')
-    for path in all_paths:
-        process_transcript(path, args.html_path, args.es_path)
+    all_files = os.listdir(args.in_path)
+    for file_name in all_files:
+        process_transcript(
+            args.in_path + file_name,
+            args.html_path,
+            args.es_path)
