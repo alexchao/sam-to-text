@@ -1,0 +1,34 @@
+{
+  "transcripts": [
+    {
+      "id": "waking-up-005-charlie-hebdo",
+      "title": "After Charlie Hebdo and Other Thoughts",
+      "source_files": ["waking-up-005-charlie-hebdo.json"]
+    },
+    {
+      "id": "waking-up-008-ama01",
+      "title": "Ask Me Anything #1",
+      "source_files": ["waking-up-008-ama01.json"]
+    },
+    {
+      "id": "waking-up-009-chomsky",
+      "title": "Final Thoughts on Chomsky",
+      "source_files": ["waking-up-009-final-thoughts-on-chomsky.json"]
+    },
+    {
+      "id": "waking-up-017-profiling",
+      "title": "What I Really Think About Profiling",
+      "source_files": ["waking-up-017-profiling.json"]
+    },
+    {
+      "id": "waking-up-043-jihadists",
+      "title": "What Do Jihadists Really Want",
+      "source_files": ["waking-up-043-what-do-jihadists-really-want.json"]
+    },
+    {
+      "id": "waking-up-051-the-most-powerful-clown",
+      "title": "The Most Powerful Clown",
+      "source_files": ["waking-up-051-the-most-powerful-clown.json"]
+    }
+  ]
+}
