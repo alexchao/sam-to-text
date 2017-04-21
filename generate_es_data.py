@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 import argparse
 import json
+import logging
+
+from bs4 import BeautifulSoup
 
 from transcript_config import read_config
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 STATIC_BASE_URI = 'https://storage.googleapis.com/sam-to-text-html/'
@@ -87,6 +93,36 @@ def process_transcript(config, html_path, es_path):
     """Given a transcript config, generate the HTML file and ES documents
     and write them to disk.
     """
+    logging.info('Processing transcript {}, with files...'.format(config.id))
+    for file_path in config.source_files:
+        logging.info('    {}'.format(file_path))
+    if config.source_type == 'JSON':
+        chunks = process_gcs_transcript(config)
+    elif config.source_type == 'HTML':
+        if len(config.source_files) > 1:
+            raise Exception('Encountered multiple files for HTML transcript.')
+        chunks = process_html_transcript(config)
+
+    write_html_document(chunks, config, html_path)
+    write_es_documents(chunks, config, es_path)
+
+
+def process_html_transcript(config):
+    """Process a transcript that's already in HTML format."""
+    file_path = config.source_files[0]
+    with open(file_path, 'r') as f:
+        soup = BeautifulSoup(f.read(), 'html.parser')
+
+    chunker = TranscriptChunker()
+    for el in soup.contents:
+        if el.name == 'p':
+            chunker.add_transcript('<p>{}</p>'.format(el.text))
+
+    return chunker.get_chunks()
+
+
+def process_gcs_transcript(config):
+    """Process a Google Cloud Speech transcript."""
     chunker = TranscriptChunker()
     for file_path in config.source_files:
         with open(file_path, 'r') as f:
@@ -97,14 +133,13 @@ def process_transcript(config, html_path, es_path):
             best_transcript = get_best_transcript_from_result(result)
             chunker.add_transcript('<p>{}</p>'.format(best_transcript))
 
-    all_chunks = chunker.get_chunks()
-    write_html_document(all_chunks, config, html_path)
-    write_es_documents(all_chunks, config, es_path)
+    return chunker.get_chunks()
 
 
 def process_transcripts(config_path, html_path, es_path):
     """Read the transcript config file and generate HTML documents
-    and ES documents for each transcript."""
+    and ES documents for each transcript.
+    """
     configs = read_config(config_path)
     for config in configs:
         process_transcript(config, html_path, es_path)

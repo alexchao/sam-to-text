@@ -2,12 +2,25 @@
 import json
 from collections import namedtuple
 import os
+import re
 
 
-TranscriptConfig = namedtuple(
+RE_FILE_EXT = re.compile('.*\.(json|html)')
+
+
+class TranscriptConfig(namedtuple(
     'TranscriptConfig',
     ['id', 'title', 'source_files']
-)
+)):
+
+    @property
+    def source_type(self):
+        first_file = self.source_files[0]
+        match = re.search(RE_FILE_EXT, first_file)
+        if not match:
+            raise Exception('Unexpected file type: {}'.format(first_file))
+
+        return match.group(1).upper()
 
 
 def make_relative_paths(source_files, path_head):
