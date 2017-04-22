@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 STATIC_BASE_URI = 'https://storage.googleapis.com/sam-to-text-html/'
 
 # Max length of a transcript chunk in characters
-CHUNK_MAX_LENGTH = 5000
+CHUNK_MAX_LENGTH = 1000
 
 
 def make_static_uri(doc_id):
