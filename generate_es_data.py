@@ -21,6 +21,15 @@ def make_static_uri(doc_id):
     return STATIC_BASE_URI + doc_id + '.html'
 
 
+def htmlify_chunks(chunks):
+    html_chunks = []
+    for i, chunk in enumerate(chunks):
+        html_chunks.append(
+            '<div class="chunk" id="chunk-{id}">{chunk}</div>'.format(
+                id=i, chunk=chunk))
+    return html_chunks
+
+
 class TranscriptChunker:
     """Allows text to be chunked according to CHUNK_MAX_LENGTH. This is
     to allow breaking up a single large document into a set of smaller
@@ -103,8 +112,9 @@ def process_transcript(config, html_path, es_path):
             raise Exception('Encountered multiple files for HTML transcript.')
         chunks = process_html_transcript(config)
 
-    write_html_document(chunks, config, html_path)
-    write_es_documents(chunks, config, es_path)
+    html_chunks = htmlify_chunks(chunks)
+    write_html_document(html_chunks, config, html_path)
+    write_es_documents(html_chunks, config, es_path)
 
 
 def process_html_transcript(config):
