@@ -1,0 +1,19 @@
+{
+  "transcripts": [
+    {
+      "id": "waking-up-005-charlie-hebdo",
+      "type": "api/gcs",
+      "title": "After Charlie Hebdo and Other Thoughts",
+      "source_files": [
+        "waking-up-005-charlie-hebdo-1.json",
+        "waking-up-005-charlie-hebdo-2.json"
+      ]
+    },
+    {
+      "id": "waking-up-008-ama01",
+      "type": "api/watson",
+      "title": "Ask Me Anything #1",
+      "source_files": ["waking-up-008-ama01.json"]
+    }
+  ]
+}

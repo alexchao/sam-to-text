@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
+from enum import Enum
 import json
 from collections import namedtuple
 import os
-import re
 
 
-RE_FILE_EXT = re.compile('.*\.(json|html)')
+class ConfigType(Enum):
+    """Types of configs supported.
+    GCS: Google Cloud Speech JSON
+    WATSON: IBM Watson Speech-To-Text JSON
+    HTML: Raw HTML file with text wrapped in paragraph tags.
+    """
+    GCS = 'api/gcs'
+    WATSON = 'api/watson'
+    HTML = 'html'
 
 
-class TranscriptConfig(namedtuple(
+TranscriptConfig = namedtuple(
     'TranscriptConfig',
-    ['id', 'title', 'source_files']
-)):
-
-    @property
-    def source_type(self):
-        first_file = self.source_files[0]
-        match = re.search(RE_FILE_EXT, first_file)
-        if not match:
-            raise Exception('Unexpected file type: {}'.format(first_file))
-
-        return match.group(1).upper()
+    ['id', 'type', 'title', 'source_files']
+)
 
 
 def make_relative_paths(source_files, path_head):
@@ -32,15 +31,18 @@ def make_relative_paths(source_files, path_head):
 
 
 def read_config(file_path):
+    """Given a file path to a transcript config file, return a list of
+    TranscriptConfig's.
+    """
     head, _ = os.path.split(file_path)
     with open(file_path, 'r') as f:
         json_data = json.loads(f.read())
     return [
         TranscriptConfig(
             transcript_json['id'],
+            ConfigType(transcript_json['type']),
             transcript_json['title'],
             make_relative_paths(transcript_json['source_files'], head)
         )
         for transcript_json in json_data['transcripts']
     ]
-

@@ -5,6 +5,7 @@ import logging
 
 from bs4 import BeautifulSoup
 
+from transcript_config import ConfigType
 from transcript_config import read_config
 
 
@@ -105,9 +106,9 @@ def process_transcript(config, html_path, es_path):
     logging.info('Processing transcript {}, with files...'.format(config.id))
     for file_path in config.source_files:
         logging.info('    {}'.format(file_path))
-    if config.source_type == 'JSON':
+    if config.type == ConfigType.GCS:
         chunks = process_gcs_transcript(config)
-    elif config.source_type == 'HTML':
+    elif config.type == ConfigType.HTML:
         if len(config.source_files) > 1:
             raise Exception('Encountered multiple files for HTML transcript.')
         chunks = process_html_transcript(config)
