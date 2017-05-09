@@ -18,7 +18,7 @@ class ConfigType(Enum):
 
 TranscriptConfig = namedtuple(
     'TranscriptConfig',
-    ['id', 'type', 'title', 'source_files']
+    ['id', 'type', 'title', 'source_files', 'extra']
 )
 
 
@@ -37,12 +37,14 @@ def read_config(file_path):
     head, _ = os.path.split(file_path)
     with open(file_path, 'r') as f:
         json_data = json.loads(f.read())
+
     return [
         TranscriptConfig(
             transcript_json['id'],
             ConfigType(transcript_json['type']),
             transcript_json['title'],
-            make_relative_paths(transcript_json['source_files'], head)
+            make_relative_paths(transcript_json['source_files'], head),
+            transcript_json.get('extra', None)
         )
         for transcript_json in json_data['transcripts']
     ]

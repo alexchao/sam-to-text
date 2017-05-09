@@ -6,6 +6,7 @@ import logging
 from bs4 import BeautifulSoup
 
 from sam_to_text.processors.transcript_chunker import TranscriptChunker
+from sam_to_text.processors.watson import process_watson_transcript
 from sam_to_text.transcript_config import ConfigType
 from sam_to_text.transcript_config import read_config
 
@@ -69,8 +70,8 @@ def process_transcript(config, html_path, es_path):
         logging.info('    {}'.format(file_path))
     if config.type == ConfigType.GCS:
         chunks = process_gcs_transcript(config)
-    # elif config.type == ConfigType.WATSON:
-    #     chunks = process_watson_transcript(config)
+    elif config.type == ConfigType.WATSON:
+        chunks = process_watson_transcript(config)
     elif config.type == ConfigType.HTML:
         if len(config.source_files) > 1:
             raise Exception('Encountered multiple files for HTML transcript.')
