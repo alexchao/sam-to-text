@@ -1,3 +1,8 @@
 *.pyc
 *.swp
+
+# storage for data files
 data/
+
+# virtual environment
+env/
