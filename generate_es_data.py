@@ -5,52 +5,17 @@ import logging
 
 from bs4 import BeautifulSoup
 
-from transcript_config import ConfigType
-from transcript_config import read_config
+from sam_to_text.processors.transcript_chunker import TranscriptChunker
+from sam_to_text.transcript_config import ConfigType
+from sam_to_text.transcript_config import read_config
 
 
 logging.basicConfig(level=logging.INFO)
 
 
-STATIC_BASE_URI = 'https://storage.googleapis.com/sam-to-text-html/'
-
-# Max length of a transcript chunk in characters
-CHUNK_MAX_LENGTH = 1000
-
-
-def make_static_uri(doc_id):
-    return STATIC_BASE_URI + doc_id + '.html'
-
-
-def htmlify_chunks(chunks):
-    html_chunks = []
-    for i, chunk in enumerate(chunks):
-        html_chunks.append(
-            '<div class="chunk" id="chunk-{id}">{chunk}</div>'.format(
-                id=i, chunk=chunk))
-    return html_chunks
-
-
-class TranscriptChunker:
-    """Allows text to be chunked according to CHUNK_MAX_LENGTH. This is
-    to allow breaking up a single large document into a set of smaller
-    documents for ES ingestion.
-    """
-
-    def __init__(self):
-        self._chunk = ''
-        self._chunks = []
-
-    def add_transcript(self, text):
-        self._chunk += text
-        if len(self._chunk) > CHUNK_MAX_LENGTH:
-            self._chunks.append(self._chunk)
-            self._chunk = ''
-
-    def get_chunks(self):
-        if self._chunk:
-            return self._chunks + [self._chunk]
-        return self._chunks
+def htmlify_chunk(chunk, index):
+    return '<div class="chunk" id="chunk-{id}">{chunk}</div>'.format(
+        id=index, chunk=chunk)
 
 
 def get_best_transcript_from_result(result):
@@ -66,11 +31,10 @@ def get_best_transcript_from_result(result):
     return best_transcript
 
 
-def write_html_document(chunks, config, html_path):
+def write_html_document(full_html, config, html_path):
     with open('template.html', 'r') as template_file:
         template_html = template_file.read()
 
-    full_html = ''.join(chunks)
     html_document = template_html.format(
         title=config.title,
         content=full_html)
@@ -81,22 +45,19 @@ def write_html_document(chunks, config, html_path):
         out_html_file.write(html_document)
 
 
-def write_es_documents(chunks, config, es_path):
-    for i, chunk in enumerate(chunks):
-        json_doc = {
-            'id': config.id,
-            'static_uri': make_static_uri(config.id),
-            'title': config.title,
-            'chunk_id': i,
-            'total_chunks': len(chunks),
-            'content': chunk
-        }
-        es_file_path = '{es_path}{doc_id}-{i}.json'.format(
-            es_path=es_path,
-            doc_id=config.id,
-            i=i)
-        with open(es_file_path, 'w') as out_es_file:
-            out_es_file.write(json.dumps(json_doc))
+def write_es_document(chunk, index, config, es_path):
+    json_doc = {
+        'id': config.id,
+        'title': config.title,
+        'chunk_id': index,
+        'content': chunk
+    }
+    es_file_path = '{es_path}{doc_id}-{i}.json'.format(
+        es_path=es_path,
+        doc_id=config.id,
+        i=index)
+    with open(es_file_path, 'w') as out_es_file:
+        out_es_file.write(json.dumps(json_doc))
 
 
 def process_transcript(config, html_path, es_path):
@@ -108,14 +69,19 @@ def process_transcript(config, html_path, es_path):
         logging.info('    {}'.format(file_path))
     if config.type == ConfigType.GCS:
         chunks = process_gcs_transcript(config)
+    # elif config.type == ConfigType.WATSON:
+    #     chunks = process_watson_transcript(config)
     elif config.type == ConfigType.HTML:
         if len(config.source_files) > 1:
             raise Exception('Encountered multiple files for HTML transcript.')
         chunks = process_html_transcript(config)
 
-    html_chunks = htmlify_chunks(chunks)
-    write_html_document(html_chunks, config, html_path)
-    write_es_documents(html_chunks, config, es_path)
+    full_html = ''
+    for index, chunk in enumerate(chunks):
+        write_es_document(chunk.raw, index, config, es_path)
+        full_html += htmlify_chunk(chunk.html, index)
+
+    write_html_document(full_html, config, html_path)
 
 
 def process_html_transcript(config):
@@ -127,7 +93,8 @@ def process_html_transcript(config):
     chunker = TranscriptChunker()
     for el in soup.contents:
         if el.name == 'p':
-            chunker.add_transcript('<p>{}</p>'.format(el.text))
+            # soup.text strips all tags
+            chunker.add_transcript(el.text, '<p>{}</p>'.format(el.text))
 
     return chunker.get_chunks()
 
@@ -142,7 +109,9 @@ def process_gcs_transcript(config):
         results = result_json['results']
         for result in results:
             best_transcript = get_best_transcript_from_result(result)
-            chunker.add_transcript('<p>{}</p>'.format(best_transcript))
+            chunker.add_transcript(
+                best_transcript,
+                '<p>{}</p>'.format(best_transcript))
 
     return chunker.get_chunks()
 

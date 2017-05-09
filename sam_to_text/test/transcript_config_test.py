@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from transcript_config import ConfigType
-from transcript_config import read_config
+from sam_to_text.transcript_config import ConfigType
+from sam_to_text.transcript_config import read_config
 
 
 TEST_CONFIG_PATH = 'test-data/test-config.json'

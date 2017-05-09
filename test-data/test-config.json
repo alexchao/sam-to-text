@@ -13,7 +13,13 @@
       "id": "waking-up-008-ama01",
       "type": "api/watson",
       "title": "Ask Me Anything #1",
-      "source_files": ["waking-up-008-ama01.json"]
+      "source_files": ["waking-up-008-ama01.json"],
+      "extra": {
+        "speakers": {
+          "0": "PB",
+          "2": "SH"
+        }
+      }
     }
   ]
 }
