@@ -116,6 +116,9 @@ def get_word_template(confidence_level):
     if confidence_level < 0.4:
         return '<span class="confidence-low">{w}</span>'
 
+    if confidence_level < 0.6:
+        return '<span class="confidence-mid">{w}</span>'
+
     return '{w}'
 
 
