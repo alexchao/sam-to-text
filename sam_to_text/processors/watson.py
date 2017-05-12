@@ -4,7 +4,16 @@ import json
 from sam_to_text.processors.transcript_chunker import TranscriptChunker
 
 
-def _check_result_status(result, result_transcript):
+def validate_result_status(result, result_transcript):
+    """Check to make sure result meets expected conditions for processing.
+    That is, there should only be one alternative, and all results should be
+    labeled "final."
+
+    Arguments:
+    result -- result JSON
+    result_transcript -- transcript text for error messaging
+
+    """
     if len(result['alternatives']) > 1:
         raise Exception('Found > 1 alternatives for result: {}'.format(
             result_transcript))
@@ -29,7 +38,7 @@ def process_watson_transcript(config):
 
     for result in result_json['results']:
         best_result = result['alternatives'][0]
-        _check_result_status(result, best_result['transcript'])
+        validate_result_status(result, best_result['transcript'])
         transcript_html = make_html_from_result(
             best_result,
             config,
@@ -39,7 +48,18 @@ def process_watson_transcript(config):
     return chunker.get_chunks()
 
 
-def _group_speaker_utterances(timestamps, word_confidence, speaker_labels):
+def group_utterances_by_speaker(timestamps, word_confidence, speaker_labels):
+    """Given timestamp information for a transcript, group the words into
+    phrases according to who spoke them. Also, for convenience, merge in
+    word_confidence info.
+
+    Arguments:
+    timestamps -- list of ["word", 1.56, 1.89]
+    word_confidence -- list of ["word", 0.9]
+    speaker_labels -- dict mapping "from" timestamp to speaker label
+
+    Return a list of {'speaker_id', 'utterances' (list)} objects.
+    """
     dialogue = []
     speaker_id = None
     utterances = []
@@ -68,7 +88,7 @@ def _group_speaker_utterances(timestamps, word_confidence, speaker_labels):
 
 
 def make_html_from_result(result, config, speaker_labels):
-    dialogue = _group_speaker_utterances(
+    dialogue = group_utterances_by_speaker(
         result['timestamps'],
         result['word_confidence'],
         speaker_labels)
