@@ -58,7 +58,8 @@ def group_utterances_by_speaker(timestamps, word_confidence, speaker_labels):
     word_confidence -- list of ["word", 0.9]
     speaker_labels -- dict mapping "from" timestamp to speaker label
 
-    Return a list of {'speaker_id', 'utterances' (list)} objects.
+    Return a list of {'speaker_id', 'utterances' (list)} objects, where
+        an `utterance` is a {'word', 'confidence'} object.
     """
     dialogue = []
     speaker_id = None
@@ -95,22 +96,30 @@ def make_html_from_result(result, config, speaker_labels):
 
     full_html = ''
     for speech in dialogue:
-        speaker_name = config.extra['speakers'][str(speech['speaker_id'])]
+        speaker_name = get_speaker_name(config, speech['speaker_id'])
         words = []
         for utterance in speech['utterances']:
-            confidence = utterance['confidence']
-            word = utterance['word']
-            if confidence < 0.2:
-                words.append('<span class="confidence-poor">{}</span>'.format(
-                    word))
-            elif confidence < 0.4:
-                words.append('<span class="confidence-low">{}</span>'.format(
-                    word))
-            else:
-                words.append(word)
+            template = get_word_template(utterance['confidence'])
+            words.append(template.format(w=utterance['word']))
 
         full_html += '<p><span class="speaker-name">{speaker}</span>: {words}</p>'.format(
             speaker=speaker_name,
             words=' '.join(words))
 
     return full_html
+
+
+def get_word_template(confidence_level):
+    if confidence_level < 0.2:
+        return '<span class="confidence-poor">{w}</span>'
+
+    if confidence_level < 0.4:
+        return '<span class="confidence-low">{w}</span>'
+
+    return '{w}'
+
+
+def get_speaker_name(config, speaker_id):
+    """Get the speaker name from config.extra object given integer speaker_id.
+    """
+    return config.extra['speakers'][str(speaker_id)]
