@@ -6,6 +6,7 @@ import logging
 from bs4 import BeautifulSoup
 
 from sam_to_text.processors.transcript_chunker import TranscriptChunker
+from sam_to_text.processors.gcs import process_gcs_transcript
 from sam_to_text.processors.watson import process_watson_transcript
 from sam_to_text.transcript_config import ConfigType
 from sam_to_text.transcript_config import read_config
@@ -17,19 +18,6 @@ logging.basicConfig(level=logging.INFO)
 def htmlify_chunk(chunk, index):
     return '<div class="chunk" id="chunk-{id}">{chunk}</div>'.format(
         id=index, chunk=chunk)
-
-
-def get_best_transcript_from_result(result):
-    """Use confidence level to determine the best transcript among all
-    alternatives.
-    """
-    best_transcript = None
-    best_confidence = -1
-    for a in result['alternatives']:
-        if a['confidence'] > best_confidence:
-            best_transcript = a['transcript']
-            best_confidence = a['confidence']
-    return best_transcript
 
 
 def write_html_document(full_html, config, html_path):
@@ -96,23 +84,6 @@ def process_html_transcript(config):
         if el.name == 'p':
             # soup.text strips all tags
             chunker.add_transcript(el.text, '<p>{}</p>'.format(el.text))
-
-    return chunker.get_chunks()
-
-
-def process_gcs_transcript(config):
-    """Process a Google Cloud Speech transcript."""
-    chunker = TranscriptChunker()
-    for file_path in config.source_files:
-        with open(file_path, 'r') as f:
-            result_json = json.loads(f.read())
-
-        results = result_json['results']
-        for result in results:
-            best_transcript = get_best_transcript_from_result(result)
-            chunker.add_transcript(
-                best_transcript,
-                '<p>{}</p>'.format(best_transcript))
 
     return chunker.get_chunks()
 
