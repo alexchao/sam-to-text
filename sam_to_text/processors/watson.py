@@ -2,6 +2,7 @@
 import json
 
 from sam_to_text.processors.transcript_chunker import TranscriptChunker
+from sam_to_text import util
 
 
 def validate_result_status(result, result_transcript):
@@ -58,29 +59,35 @@ def group_utterances_by_speaker(timestamps, word_confidence, speaker_labels):
     word_confidence -- list of ["word", 0.9]
     speaker_labels -- dict mapping "from" timestamp to speaker label
 
-    Return a list of {'speaker_id', 'utterances' (list)} objects, where
-        an `utterance` is a {'word', 'confidence'} object.
+    Return a list of {'speaker_id', 'timestamp', 'utterances' (list)} dicts,
+        where an `utterance` is a {'word', 'confidence'} dict.
     """
     dialogue = []
     speaker_id = None
+    speaker_timestamp = None
     utterances = []
     for i, timestamp in enumerate(timestamps):
-        utterance, ts_from, _ = timestamp
+        word, ts_from, _ = timestamp
         new_speaker_id = speaker_labels[ts_from]['speaker']
-        if speaker_id is None:
+        if speaker_id is None and speaker_timestamp is None:
             speaker_id = new_speaker_id
+            speaker_timestamp = ts_from
         elif speaker_id != new_speaker_id:
-            dialogue.append({'speaker_id': speaker_id, 'utterances': utterances})
+            dialogue.append({
+                'speaker_id': speaker_id,
+                'timestamp': speaker_timestamp,
+                'utterances': utterances})
             speaker_id = new_speaker_id
+            speaker_timestamp = ts_from
             utterances = []
 
-        if timestamp[0] != word_confidence[i][0]:
+        if word != word_confidence[i][0]:
             raise Exception(
                 'Found timestamp-word_confidence mismatch: {}'.format(
-                    timestamp[0] + ' =/= ' + word_confidence[i][0]))
+                    word + ' =/= ' + word_confidence[i][0]))
 
         utterances.append({
-            'word': timestamp[0],
+            'word': word,
             'confidence': word_confidence[i][1]
         })
 
@@ -102,11 +109,22 @@ def make_html_from_result(result, config, speaker_labels):
             template = get_word_template(utterance['confidence'])
             words.append(template.format(w=utterance['word']))
 
-        full_html += '<p><span class="speaker-name">{speaker}</span>: {words}</p>'.format(
-            speaker=speaker_name,
-            words=' '.join(words))
+        full_html += format_speech_html(
+            speaker_name,
+            speech['timestamp'],
+            words)
 
     return full_html
+
+
+def format_speech_html(speaker_name, timestamp, word_list):
+    template = ('<p><span class="speaker-name">{speaker}</span> '
+                '(<span class="speaker-timestamp">{timestamp}</span>): '
+                '{words}</p>')
+    return template.format(
+        speaker=speaker_name,
+        timestamp=util.format_timestamp(timestamp),
+        words=' '.join(word_list))
 
 
 def get_word_template(confidence_level):
