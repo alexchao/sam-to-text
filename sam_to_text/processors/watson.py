@@ -73,6 +73,7 @@ def group_utterances_by_speaker(timestamps, word_confidence, speaker_labels):
             speaker_id = new_speaker_id
             speaker_timestamp = ts_from
         elif speaker_id != new_speaker_id:
+            # FIXME: this append() is duplicated below right after the loop
             dialogue.append({
                 'speaker_id': speaker_id,
                 'timestamp': speaker_timestamp,
@@ -91,7 +92,11 @@ def group_utterances_by_speaker(timestamps, word_confidence, speaker_labels):
             'confidence': word_confidence[i][1]
         })
 
-    dialogue.append({'speaker_id': speaker_id, 'utterances': utterances})
+    dialogue.append({
+        'speaker_id': speaker_id,
+        'timestamp': speaker_timestamp,
+        'utterances': utterances})
+
     return dialogue
 
 
